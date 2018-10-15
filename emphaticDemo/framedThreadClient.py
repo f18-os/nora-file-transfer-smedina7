@@ -61,30 +61,30 @@ class ClientThread(Thread):
             print('could not open socket')
             sys.exit(1)
 
-        clientFile = input("What file do you want to send:\n")
+        client_file = input("What file do you want to send:\n")
 
-        if not os.path.exists(clientFile):
-            print("File %s doesn't exist! Exiting" % clientFile)
+        if not os.path.exists(client_file):
+            print("File %s doesn't exist! Exiting" % client_file)
             sys.exit(1)
 
         fs = FramedStreamSock(s, debug=debug)
 
         # sending name of file first so that server can verify
-        print("sendind file: " + clientFile)
-        fs.sendmsg(clientFile)
+        print("sendind file: " + client_file)
+        fs.sendmsg(client_file)
 
         # if file exits..
-        if (fs.receivemsg() == b"ERROR File already exists... Exiting."):
+        if fs.receivemsg() == b"ERROR File already exists... Exiting.":
             print(fs.receivemsg())
             sys.exit(1)  # exit
 
         # #if server says it's ready
-        if (fs.receivemsg() == b"Ready"):
+        if fs.receivemsg() == b"Ready":
             print("Sending...")
 
-        f = open(clientFile, "rb")
+        f = open(client_file, "rb")
         byte = f.read(100)
-        while (byte):
+        while byte:
             fs.sendmsg(byte)
             print("Sending copy of...", fs.receivemsg())
             byte = f.read(100)
