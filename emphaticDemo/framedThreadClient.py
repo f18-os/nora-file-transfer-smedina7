@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 # Echo client program
+import os
 import socket, sys, re
 import params
 from framedSock import FramedStreamSock
@@ -11,7 +12,7 @@ switchesVarDefaults = (
     (('-s', '--server'), 'server', "localhost:50001"),
     (('-d', '--debug'), "debug", False), # boolean (set if present)
     (('-?', '--usage'), "usage", False), # boolean (set if present)
-    )
+)
 
 
 progname = "framedClient"
@@ -60,16 +61,36 @@ class ClientThread(Thread):
            print('could not open socket')
            sys.exit(1)
 
+       clientFile = input("What file do you want to send:\n")
+
+
+       if not os.path.exists(clientFile):
+           print ("File %s doesn't exist! Exiting" % clientFile)
+           sys.exit(1)
+
        fs = FramedStreamSock(s, debug=debug)
+       #sending name of file first so that server can verify
+
+       print("sendind file: " + clientFile)
+       fs.sendmsg(clientFile)
+
+       #if file exits..
+       if(fs.receivemsg() == b"ERROR File already exists... Exiting."):
+           print(fs.receivemsg())
+           sys.exit(1)  #exit
+
+        # #if server says it's ready
+       if(fs.receivemsg() == b"Ready"):
+            print("Sending...")
+
+       f = open(clientFile, "rb")
+       byte = f.read(100)
+       while(byte):
+           fs.sendmsg(byte)
+           print("Sending copy of...", fs.receivemsg())
+           byte = f.read(100)
 
 
-       print("sending hello world")
-       fs.sendmsg(b"hello world")
-       print("received:", fs.receivemsg())
-
-       fs.sendmsg(b"hello world")
-       print("received:", fs.receivemsg())
 
 for i in range(100):
     ClientThread(serverHost, serverPort, debug)
-

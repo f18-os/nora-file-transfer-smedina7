@@ -38,8 +38,27 @@ class ServerThread(Thread):
             requestNum = ServerThread.requestCount
             time.sleep(0.001)
             ServerThread.requestCount = requestNum + 1
-            msg = ("%s! (%d)" % (msg, requestNum)).encode()
-            self.fsock.sendmsg(msg)
+
+            #verify if the file exists already
+            if os.path.exists(msg):
+                print("ERROR File already exists.. Exiting.")
+                self.fsock.sendmsg(b"ERROR File already exists... Exiting.")
+                sys.exit(1)
+
+            self.fsock.sendmsg(b"Ready")
+
+            #create/open file
+            f = open(msg, "wb")
+
+            #save the rest of the messages in a new variable
+            file = self.fsock.receivemsg()
+
+            print("Copying..." + msg.decode())
+
+            f.write(file)
+
+            file = ("%s! (%d)" % (file, requestNum)).encode()
+            self.fsock.sendmsg(file)
 
 
 while True:
