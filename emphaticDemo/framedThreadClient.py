@@ -61,7 +61,7 @@ class ClientThread(Thread):
             print('could not open socket')
             sys.exit(1)
 
-        client_file = input("What file do you want to send:\n")
+        client_file = input("What file do you want to send:")
 
         if not os.path.exists(client_file):
             print("File %s doesn't exist! Exiting" % client_file)
