@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 import sys, os, socket, params, time
+import threading
 from threading import Thread
 from framedSock import FramedStreamSock
 
@@ -11,6 +12,8 @@ switchesVarDefaults = (
 
 progname = "echoserver"
 paramMap = params.parseParams(switchesVarDefaults)
+
+lock = threading.Lock()
 
 debug, listenPort = paramMap['debug'], paramMap['listenPort']
 
@@ -34,14 +37,16 @@ class ServerThread(Thread):
 
     def run(self):
         while True:
-            lock.acquire(True, -1)
             msg = self.fsock.receivemsg()
+
             if not msg:
                 if self.debug: print(self.fsock, "server thread done")
                 return
+
             requestNum = ServerThread.requestCount
             time.sleep(0.001)
             ServerThread.requestCount = requestNum + 1
+            lock.acquire(True, -1)
 
             # verify if the file exists already
             # first var will be the name of the file
