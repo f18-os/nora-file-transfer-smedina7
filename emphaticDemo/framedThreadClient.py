@@ -79,23 +79,15 @@ class ClientThread(Thread):
         print("sending file: " + client_file)
         clientF_encode = client_file.encode()
         fs.sendmsg(clientF_encode)
-        print("Server received:" + fs.receivemsg())
-
-        #if file exits..
-        if fs.receivemsg() == b"ERROR File already exists... Exiting.":
-            print(fs.receivemsg())
-            sys.exit(1)  # exit
-
-        # #if server says it's ready
-        if fs.receivemsg() == b"Ready":
-            print("Sending...")
+        print("Server received:" + fs.receivemsg().decode())
 
         f = open(client_file, "rb")
         byte = f.read(100)
         while byte:
             fs.sendmsg(byte)
-            print("Sending copy of...", fs.receivemsg())
+            print("Sending copy of...", fs.receivemsg().decode())
             byte = f.read(100)
+        fs.sendmsg(b"Done")
 
 
 for i in range(1):
