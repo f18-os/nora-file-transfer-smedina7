@@ -44,9 +44,9 @@ class ServerThread(Thread):
                 return
 
             requestNum = ServerThread.requestCount
-            time.sleep(0.001)
+            #time.sleep(0.001)
             ServerThread.requestCount = requestNum + 1
-            lock.acquire(True, -1)
+            #lock.acquire(True, -1)
 
             # verify if the file exists already
             # first var will be the name of the file
@@ -73,7 +73,7 @@ class ServerThread(Thread):
 
             file = ("%s! (%d)" % (file, requestNum)).encode()
             self.fsock.sendmsg(file)
-            lock.release()
+            #lock.release()
 
 
 while True:
