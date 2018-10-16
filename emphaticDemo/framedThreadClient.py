@@ -3,10 +3,18 @@
 # Echo client program
 import os
 import socket, sys, re
+import threading
+
 import params
 from framedSock import FramedStreamSock
 from threading import Thread
 import time
+
+# store name of file
+client_file = input("What file do you want to send:\n")
+if not os.path.exists(client_file):
+    print("File %s doesn't exist! Exiting" % client_file)
+    sys.exit(1)
 
 switchesVarDefaults = (
     (('-s', '--server'), 'server', "localhost:50001"),
@@ -36,58 +44,57 @@ class ClientThread(Thread):
         self.serverHost, self.serverPort, self.debug = serverHost, serverPort, debug
         self.start()
 
+        #locking client
+        self.lock = threading.Lock()
+
     def run(self):
-        s = None
-        for res in socket.getaddrinfo(serverHost, serverPort, socket.AF_UNSPEC, socket.SOCK_STREAM):
-            af, socktype, proto, canonname, sa = res
-            try:
-                print("creating sock: af=%d, type=%d, proto=%d" % (af, socktype, proto))
-                s = socket.socket(af, socktype, proto)
-            except socket.error as msg:
-                print(" error: %s" % msg)
-                s = None
-                continue
-            try:
-                print(" attempting to connect to %s" % repr(sa))
-                s.connect(sa)
-            except socket.error as msg:
-                print(" error: %s" % msg)
-                s.close()
-                s = None
-                continue
-            break
+        with self.lock:
+            s = None
+            for res in socket.getaddrinfo(serverHost, serverPort, socket.AF_UNSPEC, socket.SOCK_STREAM):
+                af, socktype, proto, canonname, sa = res
+                try:
+                    print("creating sock: af=%d, type=%d, proto=%d" % (af, socktype, proto))
+                    s = socket.socket(af, socktype, proto)
+                except socket.error as msg:
+                    print(" error: %s" % msg)
+                    s = None
+                    continue
+                try:
+                    print(" attempting to connect to %s" % repr(sa))
+                    s.connect(sa)
+                except socket.error as msg:
+                    print(" error: %s" % msg)
+                    s.close()
+                    s = None
+                    continue
+                break
 
-        if s is None:
-            print('could not open socket')
-            sys.exit(1)
+            if s is None:
+                print('could not open socket')
+                sys.exit(1)
 
-        client_file = input("What file do you want to send:")
+            fs = FramedStreamSock(s, debug=debug)
 
-        if not os.path.exists(client_file):
-            print("File %s doesn't exist! Exiting" % client_file)
-            sys.exit(1)
+            # sending name of file first so that server can verify
+            print("sendind file: " + client_file)
+            clientF_encode = client_file.encode()
+            fs.sendmsg(clientF_encode)
 
-        fs = FramedStreamSock(s, debug=debug)
+            # if file exits..
+            if fs.receivemsg() == b"ERROR File already exists... Exiting.":
+                print(fs.receivemsg())
+                sys.exit(1)  # exit
 
-        # sending name of file first so that server can verify
-        print("sendind file: " + client_file)
-        fs.sendmsg(client_file)
+            # #if server says it's ready
+            if fs.receivemsg() == b"Ready":
+                print("Sending...")
 
-        # if file exits..
-        if fs.receivemsg() == b"ERROR File already exists... Exiting.":
-            print(fs.receivemsg())
-            sys.exit(1)  # exit
-
-        # #if server says it's ready
-        if fs.receivemsg() == b"Ready":
-            print("Sending...")
-
-        f = open(client_file, "rb")
-        byte = f.read(100)
-        while byte:
-            fs.sendmsg(byte)
-            print("Sending copy of...", fs.receivemsg())
+            f = open(client_file, "rb")
             byte = f.read(100)
+            while byte:
+                fs.sendmsg(byte)
+                print("Sending copy of...", fs.receivemsg())
+                byte = f.read(100)
 
 
 for i in range(100):
