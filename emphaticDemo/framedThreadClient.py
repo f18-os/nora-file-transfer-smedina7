@@ -45,57 +45,58 @@ class ClientThread(Thread):
         self.start()
 
         #locking client
-        self.lock = threading.Lock()
+        #self.lock = threading.Lock()
 
     def run(self):
-        with self.lock:
-            s = None
-            for res in socket.getaddrinfo(serverHost, serverPort, socket.AF_UNSPEC, socket.SOCK_STREAM):
-                af, socktype, proto, canonname, sa = res
-                try:
-                    print("creating sock: af=%d, type=%d, proto=%d" % (af, socktype, proto))
-                    s = socket.socket(af, socktype, proto)
-                except socket.error as msg:
-                    print(" error: %s" % msg)
-                    s = None
-                    continue
-                try:
-                    print(" attempting to connect to %s" % repr(sa))
-                    s.connect(sa)
-                except socket.error as msg:
-                    print(" error: %s" % msg)
-                    s.close()
-                    s = None
-                    continue
-                break
+        #with self.lock:
+        s = None
+        for res in socket.getaddrinfo(serverHost, serverPort, socket.AF_UNSPEC, socket.SOCK_STREAM):
+            af, socktype, proto, canonname, sa = res
+            try:
+                print("creating sock: af=%d, type=%d, proto=%d" % (af, socktype, proto))
+                s = socket.socket(af, socktype, proto)
+            except socket.error as msg:
+                print(" error: %s" % msg)
+                s = None
+                continue
+            try:
+                print(" attempting to connect to %s" % repr(sa))
+                s.connect(sa)
+            except socket.error as msg:
+                print(" error: %s" % msg)
+                s.close()
+                s = None
+                continue
+            break
 
-            if s is None:
-                print('could not open socket')
-                sys.exit(1)
+        if s is None:
+            print('could not open socket')
+            sys.exit(1)
 
-            fs = FramedStreamSock(s, debug=debug)
+        fs = FramedStreamSock(s, debug=debug)
 
-            # sending name of file first so that server can verify
-            print("sendind file: " + client_file)
-            clientF_encode = client_file.encode()
-            fs.sendmsg(clientF_encode)
+        # sending name of file first so that server can verify
+        print("sending file: " + client_file)
+        clientF_encode = client_file.encode()
+        fs.sendmsg(clientF_encode)
+        print("Server received:" + fs.receivemsg())
 
-            # if file exits..
-            if fs.receivemsg() == b"ERROR File already exists... Exiting.":
-                print(fs.receivemsg())
-                sys.exit(1)  # exit
+        #if file exits..
+        if fs.receivemsg() == b"ERROR File already exists... Exiting.":
+            print(fs.receivemsg())
+            sys.exit(1)  # exit
 
-            # #if server says it's ready
-            if fs.receivemsg() == b"Ready":
-                print("Sending...")
+        # #if server says it's ready
+        if fs.receivemsg() == b"Ready":
+            print("Sending...")
 
-            f = open(client_file, "rb")
+        f = open(client_file, "rb")
+        byte = f.read(100)
+        while byte:
+            fs.sendmsg(byte)
+            print("Sending copy of...", fs.receivemsg())
             byte = f.read(100)
-            while byte:
-                fs.sendmsg(byte)
-                print("Sending copy of...", fs.receivemsg())
-                byte = f.read(100)
 
 
-for i in range(100):
+for i in range(1):
     ClientThread(serverHost, serverPort, debug)
