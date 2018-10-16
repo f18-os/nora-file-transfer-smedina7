@@ -76,12 +76,12 @@ class ClientThread(Thread):
         fs = FramedStreamSock(s, debug=debug)
 
         # sending name of file first so that server can verify
-        print("sendind file: " + client_file)
+        print("sending file: " + client_file)
         clientF_encode = client_file.encode()
         fs.sendmsg(clientF_encode)
         print("Server received:" + fs.receivemsg())
 
-        # if file exits..
+        #if file exits..
         if fs.receivemsg() == b"ERROR File already exists... Exiting.":
             print(fs.receivemsg())
             sys.exit(1)  # exit
@@ -98,5 +98,5 @@ class ClientThread(Thread):
             byte = f.read(100)
 
 
-for i in range(100):
+for i in range(1):
     ClientThread(serverHost, serverPort, debug)
