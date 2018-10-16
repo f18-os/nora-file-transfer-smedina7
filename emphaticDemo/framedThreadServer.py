@@ -34,6 +34,7 @@ class ServerThread(Thread):
 
     def run(self):
         while True:
+            lock.acquire(True, -1)
             msg = self.fsock.receivemsg()
             if not msg:
                 if self.debug: print(self.fsock, "server thread done")
@@ -43,15 +44,20 @@ class ServerThread(Thread):
             ServerThread.requestCount = requestNum + 1
 
             # verify if the file exists already
-            if os.path.exists(msg):
+            # first var will be the name of the file
+
+            file_n = self.fsock.receivemsg()
+
+            if os.path.exists(file_n):
                 print("ERROR File already exists.. Exiting.")
                 self.fsock.sendmsg(b"ERROR File already exists... Exiting.")
                 sys.exit(1)
 
-            self.fsock.sendmsg(b"Ready")
+            rd = ("Ready (%d)" % (requestNum)).encode
+            self.fsock.sendmsg(rd)
 
             # create/open file
-            f = open(msg, "wb")
+            f = open(file_n, "wb")
 
             # save the rest of the messages in a new variable
             file = self.fsock.receivemsg()
@@ -62,6 +68,7 @@ class ServerThread(Thread):
 
             file = ("%s! (%d)" % (file, requestNum)).encode()
             self.fsock.sendmsg(file)
+            lock.release()
 
 
 while True:
